@@ -11,55 +11,43 @@ editor_options:
 ![Last Update](https://img.shields.io/github/last-commit/sustainable-fsa/fsa-disasters?style=flat)
 ![Repo Size](https://img.shields.io/github/repo-size/sustainable-fsa/fsa-disasters?style=flat)
 
-This repository is an archive of US Secretary of Agriculture disaster designations (2012–present) and Presidential Major Disaster declarations (2017–present).
+This repository is an archive of US Secretary of Agriculture disaster designations (2012–present) and Presidential Major Disaster declarations (2017–present). County-level data are acquired weekly from the <a href="https://www.fsa.usda.gov/resources/disaster-assistance-program/disaster-designation-information" target="_blank">USDA Disaster Designation portal</a>.
 
-<a href="https://sustainable-fsa.github.io/usdm-counties-reported/manifest.html" target="_blank">📂 View the US Drought Monitor county aggregation archive listing here.</a>
-
-The county data archived in this repository were acquired via API request by R. Kyle Bocinsky (Montana Climate Office) and are updated weekly. API documentation is available at <a href="https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx" target="_blank">.
-
-Here is a template of the call used to retrieve these data:
-
-`https://usdmdataservices.unl.edu/api/CountyStatistics/GetDroughtSeverityStatisticsByAreaPercent?aoi=AK,AL,AR,AZ,CA,CO,CT,DC,DE,FL,GA,HI,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,PR,RI,SC,SD,TN,TX,UT,VA,VT,WA,WI,WV,WY&startdate=01/04/2000&enddate=01/04/2000&statisticsType=2`
+The `[fsa-disasters.R](fsa-disasters.R)` script handles all data download and processing. The script begins by downloading all USDA disaster designation spreadsheets from the official site, fixing broken links and organizing them by year. It then reads these files and combines them into one dataset, standardizing column names and formats so the information is consistent across years. Dates are converted to proper formats, and designation codes are normalized. The data is cleaned to remove errors and reorganized so each disaster type and affected county is clearly represented. Finally, the consolidated dataset is saved in both CSV and Parquet formats for easy analysis.
 
 ---
 
-## 📈 About the US Drought Monitor (USDM)
+## About USDA Secretarial Disaster Designations
+USDA Secretarial Disaster Designations identify counties impacted by natural disasters such as drought, flooding, or wildfire. These designations enable producers in affected areas to access emergency loans and other assistance programs through the Farm Service Agency (FSA).
 
-The US Drought Monitor is a weekly map-based product that synthesizes multiple drought indicators into a single national assessment. It is produced by:
+Designations are based on:
+- **Production losses** (generally 30% or more)
+- **Physical losses** (e.g., infrastructure damage)
+- Recommendations from state and local officials
 
-- National Drought Mitigation Center (NDMC)
-- US Department of Agriculture (USDA)
-- National Oceanic and Atmospheric Administration (NOAA)
+## About Presidential Major Disaster Declarations
+Presidential Major Disaster Declarations are issued under the **Stafford Act** and authorize federal assistance for communities affected by severe disasters. These declarations:
+- Provide access to FEMA programs for individuals and public infrastructure
+- Often complement USDA disaster programs for agricultural producers
+- Are based on severity, scope, and state requests for federal aid
 
-Each weekly map represents a combination of data analysis and expert interpretation.
-
-The USDM weekly maps depicting drought conditions are categorized into six levels:
-
-- **None**: Normal or wet conditions
-- **D0**: Abnormally Dry
-- **D1**: Moderate Drought
-- **D2**: Severe Drought
-- **D3**: Extreme Drought
-- **D4**: Exceptional Drought
-
-While USDM drought class boundaries are developed without regard to political boundaries, it is often aggregated by political boundaries to assist in decision-making and for regulatory purposes.
-
-> **Note**: This archive is maintained by the Montana Climate Office, but all analytical authorship of the USDM drought maps belongs to the named USDM authors.
+FEMA maintains a database of Major Disaster declarations as part of the <a href="https://www.fema.gov/about/reports-and-data/openfema" target="_blank">OpenFEMA data portal</a>. Additionally, the USDA Farm Service Agency also provides access to Presidential Major Disaster declarations.
 
 ---
 
 ## 🗂 Directory Structure
 
-- `usdm-counties-reported.R`: R script that downloads weekly USDM data aggregated to county boundaries.
-- `usdm-counties-reported.parquet`: Processed county-level USDM data in a single parquet file.
-- `data/`: Directory containing processed county-level USDM data.
-- `README.Rmd`: This README file, providing an overview and usage instructions.
+- `[fsa-disasters.R](fsa-disasters.R)`: R script that updates secretarial and presidential disaster data based on files posted by the FSA.
+- `[fsa-disasters.parquet](fsa-disasters.parquet)`: Consolidated disaster data in a single parquet file.
+- `[fsa-disasters.csv](fsa-disasters.csv)`: Consolidated disaster data in a single comma-separated values file.
+- `[data-raw/](data-raw/)`: Directory containing raw disaster data files as posted by the FSA.
+- `[README.Rmd](README.Rmd)`: This README file, providing an overview and usage instructions.
 
 ---
 
-## 📍 Quick Start: Visualize a Weekly County USDM Map in R
+## 📍 Quick Start: Visualize the 2025 Secretarial Disaster Designations for Drought in R
 
-This snippet shows how to load a weekly GeoParquet file from the archive and create a simple drought classification map using `sf` and `ggplot2`.
+This snippet shows how to load a the parquet file from the archive and create a thematic map using `sf` and `ggplot2`.
 
 ```{r example, message=FALSE, fig.align = 'center', dpi=300, fig.path = './'}
 # Load required libraries
@@ -69,27 +57,17 @@ library(ggplot2) # For plotting
 library(tigris)  # For state boundaries
 library(rmapshaper) # For innerlines function
 
-## Get latest USDM data
-latest <-
-  jsonlite::fromJSON(
-    "manifest.json"
-  )$path |>
-  stringr::str_subset("parquet") |>
-  stringr::str_subset("data/usdm") |>
-  max()
-# e.g., [1] "data/usdm/USDM_2025-05-27.parquet"
-
-date <-
-  latest |>
-  stringr::str_extract("\\d{4}-\\d{2}-\\d{2}") |>
-  lubridate::as_date()
-
-# Get the highest (worst) drought class in each county
-usdm <-
-  latest |>
+# Get the 2025 Secretarial disasters for drought
+disasters <-
+  # "https://sustainable-fsa.github.io/fsa-disasters/fsa-disasters.parquet" |>
+  "fsa-disasters.parquet" |>
   arrow::read_parquet() |>
-  dplyr::group_by(STATEFP, COUNTYFP) |>
-  dplyr::filter(usdm_class == max(usdm_class))
+  dplyr::filter(`Designation/Declaration Type` == "Secretarial",
+                stringr::str_detect(`Disaster Type`, "DROUGHT"),
+                `Begin Date` >= "2025-01-01",
+                (`End Date` < "2026-01-01") | is.na(`End Date`)) |>
+  dplyr::arrange(`Designation Code`) %>%
+  dplyr::distinct(FIPS, .keep_all = TRUE)
 
 ## Load the US Census county data
 counties <- 
@@ -103,10 +81,11 @@ counties <-
   tigris::shift_geometry() |>
   dplyr::group_by(STATEFP, COUNTYFP) |>
   dplyr::summarise(.groups = "drop") |>
-  sf::st_cast("MULTIPOLYGON")
+  sf::st_cast("MULTIPOLYGON") |>
+  dplyr::mutate(FIPS = paste0(STATEFP, COUNTYFP))
 
-usdm_counties <-
-  usdm |>
+disasters_counties <-
+  disasters |>
   dplyr::left_join(counties) |>
   sf::st_as_sf()
 
@@ -115,8 +94,8 @@ ggplot(counties) +
   geom_sf(data = sf::st_union(counties),
           fill = "grey80",
           color = NA) +
-  geom_sf(data = usdm_counties,
-          aes(fill = usdm_class), 
+  geom_sf(data = disasters_counties,
+          aes(fill = `Designation Code`), 
           color = NA) +
   geom_sf(data = rmapshaper::ms_innerlines(counties),
           fill = NA,
@@ -130,16 +109,16 @@ ggplot(counties) +
           color = "white",
           linewidth = 0.2) +
   scale_fill_manual(
-    values = c("grey80",
-               "#ffff00",
-               "#fcd37f",
-               "#ffaa00",
-               "#e60000",
-               "#730000"),
+    values = c(
+      "Primary" = "#DC0005",
+      "Contiguous" = "#FD9A09"
+    ),
+    na.value = NA,
     drop = FALSE,
-    name = "Drought\nClass") +
-  labs(title = "US Drought Monitor",
-       subtitle = format(date, " %B %d, %Y")) +
+    na.translate = FALSE,
+    name = "Designation Code") +
+  labs(title = "2025 USDA Secretarial Disaster Designations for Drought",
+       subtitle = format(lubridate::today(), " %B %d, %Y")) +
   theme_void()
 
 ```
@@ -150,25 +129,25 @@ ggplot(counties) +
 
 **Citation format** (suggested):
 
-> US Drought Monitor authors and R. Kyle Bocinsky YYYY. *Archive of US Drought Monitor Weekly Maps Aggregated to County Boundaries as Reported by the US Drought Monitor*. Data processed, curated, and archived by R. Kyle Bocinsky, Montana Climate Office. Accessed via GitHub archive, YYYY-MM-DD. https://sustainable-fsa.github.io/usdm-counties-fsa-lfp/
+> R. Kyle Bocinsky YYYY. *Archive of USDA Secretarial Disaster Designations and Presidential Major Disaster Declarations*. Data processed, curated, and archived by R. Kyle Bocinsky, Montana Climate Office. Accessed via GitHub archive, YYYY-MM-DD. https://sustainable-fsa.github.io/fsa-disasters/
 
 **Acknowledgments**:
 
-- Map content and data processing by USDM authors.
+- Data sources: USDA Farm Service Agency
 - Data curation and archival structure by R. Kyle Bocinsky, Montana Climate Office, University of Montana.
 
 ---
 
 ## 📄 License
 
-- **Raw USDM data** (NDMC): Public Domain (17 USC § 105)
+- **Raw data**: Public Domain (17 USC § 105)
 - **Processed data & scripts**: © R. Kyle Bocinsky, released under [CC0](https://creativecommons.org/publicdomain/zero/1.0/) and [MIT License](./LICENSE) as applicable
 
 ---
 
 ## ⚠️ Disclaimer
 
-This dataset is archived for research and educational use only. The National Drought Mitigation Center hosts the US Drought Monitor. Please visit https://droughtmonitor.unl.edu.
+This dataset is archived for research and educational use only.
 
 ---
 

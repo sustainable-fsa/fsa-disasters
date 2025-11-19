@@ -198,7 +198,7 @@ if(update_disasters){
         factor(
           `Designation Code`,
           levels = c("1", "2"),
-          labels = c("Primary", "Secondary"),
+          labels = c("Primary", "Contiguous"),
           ordered = TRUE
         ),
       # Correct clearly erroneous data
@@ -284,3 +284,6 @@ if(update_disasters){
   
   
 }
+
+# Knit the readme
+rmarkdown::render("README.Rmd")
