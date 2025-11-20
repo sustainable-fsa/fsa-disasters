@@ -13,7 +13,7 @@ editor_options:
 
 This repository is an archive of US Secretary of Agriculture disaster designations (2012–present) and Presidential Major Disaster declarations (2017–present). County-level data are acquired weekly from the <a href="https://www.fsa.usda.gov/resources/disaster-assistance-program/disaster-designation-information" target="_blank">USDA Disaster Designation portal</a>.
 
-The `[fsa-disasters.R](fsa-disasters.R)` script handles all data download and processing. The script begins by downloading all USDA disaster designation spreadsheets from the official site, fixing broken links and organizing them by year. It then reads these files and combines them into one dataset, standardizing column names and formats so the information is consistent across years. Dates are converted to proper formats, and designation codes are normalized. The data is cleaned to remove errors and reorganized so each disaster type and affected county is clearly represented. Finally, the consolidated dataset is saved in both CSV and Parquet formats for easy analysis.
+The [`fsa-disasters.R`](fsa-disasters.R) script handles all data download and processing. The script begins by downloading all USDA disaster designation spreadsheets from the official site, fixing broken links and organizing them by year. It then reads these files and combines them into one dataset, standardizing column names and formats so the information is consistent across years. Dates are converted to proper formats, and designation codes are normalized. The data is cleaned to remove errors and reorganized so each disaster type and affected county is clearly represented. Finally, the consolidated dataset is saved in both CSV and Parquet formats for easy analysis.
 
 ---
 
@@ -21,12 +21,14 @@ The `[fsa-disasters.R](fsa-disasters.R)` script handles all data download and pr
 USDA Secretarial Disaster Designations identify counties impacted by natural disasters such as drought, flooding, or wildfire. These designations enable producers in affected areas to access emergency loans and other assistance programs through the Farm Service Agency (FSA).
 
 Designations are based on:
+
 - **Production losses** (generally 30% or more)
 - **Physical losses** (e.g., infrastructure damage)
 - Recommendations from state and local officials
 
 ## About Presidential Major Disaster Declarations
 Presidential Major Disaster Declarations are issued under the **Stafford Act** and authorize federal assistance for communities affected by severe disasters. These declarations:
+
 - Provide access to FEMA programs for individuals and public infrastructure
 - Often complement USDA disaster programs for agricultural producers
 - Are based on severity, scope, and state requests for federal aid
@@ -37,11 +39,11 @@ FEMA maintains a database of Major Disaster declarations as part of the <a href=
 
 ## 🗂 Directory Structure
 
-- `[fsa-disasters.R](fsa-disasters.R)`: R script that updates secretarial and presidential disaster data based on files posted by the FSA.
-- `[fsa-disasters.parquet](fsa-disasters.parquet)`: Consolidated disaster data in a single parquet file.
-- `[fsa-disasters.csv](fsa-disasters.csv)`: Consolidated disaster data in a single comma-separated values file.
-- `[data-raw/](data-raw/)`: Directory containing raw disaster data files as posted by the FSA.
-- `[README.Rmd](README.Rmd)`: This README file, providing an overview and usage instructions.
+- [`fsa-disasters.R`](fsa-disasters.R): R script that updates secretarial and presidential disaster data based on files posted by the FSA.
+- [`fsa-disasters.parquet`](fsa-disasters.parquet): Consolidated disaster data in a single parquet file.
+- [`fsa-disasters.csv`](fsa-disasters.csv): Consolidated disaster data in a single comma-separated values file.
+- [`data-raw/`](data-raw/): Directory containing raw disaster data files as posted by the FSA.
+- [`README.Rmd`](README.Rmd): This README file, providing an overview and usage instructions.
 
 ---
 
