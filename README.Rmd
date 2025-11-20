@@ -120,7 +120,7 @@ ggplot(counties) +
     na.translate = FALSE,
     name = "Designation Code") +
   labs(title = "2025 USDA Secretarial Disaster Designations for Drought",
-       subtitle = format(lubridate::today(), " %B %d, %Y")) +
+       subtitle = format(lubridate::today(), "%B %d, %Y")) +
   theme_void()
 
 ```
