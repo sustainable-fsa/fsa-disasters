@@ -1,7 +1,9 @@
 title: FSA Disasters Archive
-description: Records of US Secretary of Agriculture disaster designations (2012–present) and Presidential Major Disaster declarations (2017–present).
+description:
+  Records of US Secretary of Agriculture disaster designations (2012–present) and Presidential Major Disaster
+  declarations (2017–present).
 author: R. Kyle Bocinsky
-url: "https://sustainable-fsa.github.io/fsa-disasters/"  # Your GitHub Pages URL
+url: "https://sustainable-fsa.com/fsa-disasters/" # Your GitHub Pages URL
 baseurl: "/fsa-disasters"
 
 remote_theme: jekyll/minima
