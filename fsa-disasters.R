@@ -1,10 +1,10 @@
 # update.packages(repos = "https://cran.rstudio.com/",
 #                 ask = FALSE)
 
-options("pkg.cran_mirror" = "https://mac.rproject.org")
-
 install.packages("pak",
-                 repos = "https://mac.rproject.org/")
+                 repos = "https://cran.rstudio.com/")
+
+options("pkg.cran_mirror" = "https://mac.rproject.org")
 
 # installed.packages() |>
 #   rownames() |>
