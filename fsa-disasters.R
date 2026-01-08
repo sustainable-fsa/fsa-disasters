@@ -4,7 +4,7 @@
 options("pkg.cran_mirror" = "https://mac.rproject.org")
 
 install.packages("pak",
-                 repos = "https://mac.rstudio.com/")
+                 repos = "https://mac.rproject.org/")
 
 # installed.packages() |>
 #   rownames() |>
