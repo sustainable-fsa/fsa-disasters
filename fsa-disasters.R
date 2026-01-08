@@ -2,9 +2,9 @@
 #                 ask = FALSE)
 
 install.packages("pak",
-                 repos = "https://cran.rstudio.com/")
+                 repos = "https://mac.r-project.org")
 
-options("pkg.cran_mirror" = "https://mac.rproject.org")
+options("pkg.cran_mirror" = "https://mac.r-project.org")
 
 # installed.packages() |>
 #   rownames() |>
