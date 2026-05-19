@@ -226,13 +226,15 @@ if(update_disasters){
   
   disaster_declarations <-
     disasters %>%
-    dplyr::select(`Designation/Declaration Type`, 
+    dplyr::select(`Disaster Year`,
+                  `Designation/Declaration Type`, 
                   `Designation/Declaration Number`,
                   `Amendment Number`,
                   `Description of Disaster`,
                   `Disaster Type`,
                   `Approval date`, `Begin Date`, `End Date`) %>%
     dplyr::arrange(
+      `Disaster Year`,
       `Designation/Declaration Type`, 
       `Designation/Declaration Number`,
       `Amendment Number`,
@@ -240,7 +242,8 @@ if(update_disasters){
       dplyr::desc(`Begin Date`),
       dplyr::desc(`End Date`)
     ) %>%
-    dplyr::distinct(`Designation/Declaration Type`, 
+    dplyr::distinct(`Disaster Year`,
+                    `Designation/Declaration Type`, 
                     `Designation/Declaration Number`,
                     `Amendment Number`,
                     `Disaster Type`,
@@ -249,14 +252,16 @@ if(update_disasters){
   
   disaster_counties <-
     disasters %>%
-    dplyr::select(`Designation/Declaration Type`, 
+    dplyr::select(`Disaster Year`,
+                  `Designation/Declaration Type`, 
                   `Designation/Declaration Number`,
                   `Amendment Number`,
                   FIPS, `County/Tribal Government`, State,
                   `Designation Code`
     ) %>%
     dplyr::distinct() %>%
-    dplyr::arrange(`Designation/Declaration Type`, 
+    dplyr::arrange(`Disaster Year`,
+                   `Designation/Declaration Type`, 
                    `Designation/Declaration Number`,
                    `Amendment Number`,
                    `Designation Code`,
