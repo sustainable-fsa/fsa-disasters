@@ -126,18 +126,15 @@ ggplot(counties) +
 
 ---
 
-## 📝 Citation & Attribution
+## 📝 Citation
 
-**Citation format** (suggested):
+If you use this data in published work, please cite:
 
-> R. Kyle Bocinsky YYYY. *Archive of USDA Secretarial Disaster Designations and Presidential Major Disaster Declarations*. Data processed, curated, and archived by R. Kyle Bocinsky, Montana Climate Office. Accessed via GitHub archive, YYYY-MM-DD. https://sustainable-fsa.com/fsa-disasters/
+> USDA Farm Service Agency. *Secretarial Disaster Designations (2012–present) and Presidential Major Disaster Declarations (2017–present)*. Curated and archived by R. Kyle Bocinsky, Montana Climate Office, University of Montana. Sustainable FSA project. Accessed YYYY-MM-DD. <https://sustainable-fsa.com/fsa-disasters/>
 
-**Acknowledgments**:
+Machine-readable metadata are in [`CITATION.cff`](CITATION.cff); GitHub's **Cite this repository** button (top right of the repo page) renders it as APA or BibTeX.
 
-- Data sources: USDA Farm Service Agency
-- Data curation and archival structure by R. Kyle Bocinsky, Montana Climate Office, University of Montana.
-
----
+**Acknowledgment**: This work is part of the [*Enhancing Sustainable Disaster Relief in FSA Programs*](https://www.ars.usda.gov/research/project/?accnNo=444612) project, supported by the USDA Office of the Chief Economist, Office of Energy and Environmental Policy, and the USDA Climate Hubs.
 
 ## 📄 License
 
