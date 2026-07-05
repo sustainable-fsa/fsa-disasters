@@ -31,6 +31,12 @@ library(furrr)
 library(future.mirai)
 library(arrow)
 
+source("R/s3-archive.R")
+s3_preflight()
+
+s3_bucket <- Sys.getenv("S3_BUCKET", unset = "sustainable-fsa")
+s3_prefix <- Sys.getenv("S3_PREFIX", unset = "fsa-disasters")
+
 update_disasters <- TRUE
 
 if(update_disasters){
@@ -325,5 +331,42 @@ generate_tree_flat <- function(
 # Generate the flat index
 generate_tree_flat()
 
-# Knit the readme
-rmarkdown::render("README.Rmd")
+## Publish the archive to S3
+s3_push(bucket = s3_bucket,
+        prefix = paste0(s3_prefix, "/data-raw"),
+        local_dir = "data-raw",
+        delete = TRUE)
+
+s3_put(bucket = s3_bucket,
+       key = paste0(s3_prefix, "/fsa-disasters.csv"),
+       file = "fsa-disasters.csv",
+       content_type = "text/csv",
+       cache_control = "max-age=3600")
+
+s3_put(bucket = s3_bucket,
+       key = paste0(s3_prefix, "/fsa-disasters.parquet"),
+       file = "fsa-disasters.parquet",
+       content_type = "application/vnd.apache.parquet",
+       cache_control = "max-age=3600")
+
+s3_put(bucket = s3_bucket,
+       key = paste0(s3_prefix, "/manifest.json"),
+       file = "manifest.json",
+       content_type = "application/json",
+       cache_control = "max-age=3600")
+
+s3_verify(bucket = s3_bucket,
+          prefix = paste0(s3_prefix, "/data-raw"),
+          local_dir = "data-raw")
+
+s3_write_manifest(bucket = s3_bucket,
+                  prefix = s3_prefix)
+
+cf_invalidate(
+  paths = c(
+    paste0("/", s3_prefix, "/fsa-disasters.csv"),
+    paste0("/", s3_prefix, "/fsa-disasters.parquet"),
+    paste0("/", s3_prefix, "/manifest.json"),
+    paste0("/", s3_prefix, "/_manifest.txt")
+  )
+)
