@@ -1,29 +1,22 @@
 # update.packages(repos = "https://cran.rstudio.com/",
 #                 ask = FALSE)
 
-install.packages("pak",
-                 repos = "https://mac.r-project.org")
-
-options("pkg.cran_mirror" = "https://mac.r-project.org")
-
-# installed.packages() |>
-#   rownames() |>
-#   pak::pkg_install(upgrade = TRUE,
-#                  ask = FALSE)
-
-pak::pak(
-  c(
-    "arrow",
-    "sf",
-    "curl",
-    "tidyverse",
-    "tigris",
-    "rmapshaper",
-    "furrr",
-    "future.mirai",
-    "httr2"
-  )
-)
+# Packages are provided by mt-climate-office/actions/setup-geospatial in CI.
+# For a bare local R installation, install manually:
+# install.packages("pak", repos = "https://mac.r-project.org")
+# pak::pak(
+#   c(
+#     "arrow",
+#     "sf",
+#     "curl",
+#     "tidyverse",
+#     "tigris",
+#     "rmapshaper",
+#     "furrr",
+#     "future.mirai",
+#     "httr2"
+#   )
+# )
 
 library(magrittr)
 library(tidyverse)
