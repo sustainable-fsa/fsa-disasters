@@ -363,3 +363,8 @@ cf_invalidate(
     paste0("/", s3_prefix, "/_manifest.txt")
   )
 )
+
+# ---- Render the README ----
+# Regenerates README.md and the example map from the freshly updated
+# archive; the workflow commits these (and only these) back to git.
+rmarkdown::render("README.Rmd")
