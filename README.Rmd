@@ -61,8 +61,7 @@ library(rmapshaper) # For innerlines function
 
 # Get the 2026 Secretarial disasters for drought
 disasters <-
-  # "https://data.sustainable-fsa.com/fsa-disasters/fsa-disasters.parquet" |>
-  "fsa-disasters.parquet" |>
+  "https://data.sustainable-fsa.com/fsa-disasters/fsa-disasters.parquet" |>
   arrow::read_parquet() |>
   dplyr::filter(`Designation/Declaration Type` == "Secretarial",
                 stringr::str_detect(`Disaster Type`, "DROUGHT"),
