@@ -4,7 +4,8 @@ run-name: Update the fsa-disasters archive → S3
 
 on:
   schedule:
-    - cron: '30 14 * * 4'
+    # independent root; early + off-hour so usdm-viz's soft dependency is fresh
+    - cron: '20 12 * * 4'
   workflow_dispatch:
   push:
     branches: [main]
