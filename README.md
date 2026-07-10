@@ -13,7 +13,7 @@ designations (2012–present) and Presidential Major Disaster declarations
 (2017–present). County-level disaster data are acquired weekly from the
 <a href="https://www.fsa.usda.gov/resources/disaster-assistance-program/disaster-designation-information" target="_blank">USDA
 Disaster Designation portal</a>. The raw data are archived in the
-<a href="https://data.sustainable-fsa.com/#/fsa-disasters/" target="_blank">`data-raw`
+<a href="https://data.sustainable-fsa.com/fsa-disasters/" target="_blank">`data-raw`
 directory</a>.
 
 The [`fsa-disasters.R`](fsa-disasters.R) script handles all data
