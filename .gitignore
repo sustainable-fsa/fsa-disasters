@@ -3,3 +3,11 @@
 .RData
 .Ruserdata
 .positai
+
+# S3-hosted data (purged from git history 2026-07; archive of record:
+# https://data.sustainable-fsa.com/fsa-disasters/)
+data-raw
+fsa-disasters.csv
+fsa-disasters.parquet
+manifest.json
+manifest.html
