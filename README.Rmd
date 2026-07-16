@@ -59,10 +59,18 @@ library(ggplot2) # For plotting
 library(tigris)  # For state boundaries
 library(rmapshaper) # For innerlines function
 
+# Read the full designations archive
+designations <-
+  "https://data.sustainable-fsa.com/fsa-disasters/fsa-disasters.parquet" |>
+  arrow::read_parquet()
+
+# The most recent designation approval in the archive
+latest_approval <-
+  max(designations$`Approval date`, na.rm = TRUE)
+
 # Get the 2026 Secretarial disasters for drought
 disasters <-
-  "https://data.sustainable-fsa.com/fsa-disasters/fsa-disasters.parquet" |>
-  arrow::read_parquet() |>
+  designations |>
   dplyr::filter(`Designation/Declaration Type` == "Secretarial",
                 stringr::str_detect(`Disaster Type`, "DROUGHT"),
                 `Disaster Year` == 2026) |>
@@ -71,9 +79,10 @@ disasters <-
 
 ## Load the US Census county data
 counties <- 
-  tigris::counties(cb = TRUE, 
+  tigris::counties(cb = TRUE,
                    year = 2020,
-                   resolution = "5m") |>
+                   resolution = "5m",
+                   progress_bar = FALSE) |>
   dplyr::filter(!(STATEFP %in% c("60", "66", "69", "78"))) |>
   # transform to WGS 84
   sf::st_transform("EPSG:4326") |>
@@ -117,11 +126,14 @@ ggplot(counties) +
     drop = FALSE,
     na.translate = FALSE,
     name = "Designation Code") +
-  labs(title = "2025 USDA Secretarial Disaster Designations for Drought",
-       subtitle = format(lubridate::today(), "%B %d, %Y")) +
+  labs(title = "2026 USDA Secretarial Disaster Designations for Drought",
+       subtitle = paste("Designations approved through",
+                        format(latest_approval, "%B %d, %Y"))) +
   theme_void()
 
 ```
+
+Latest designation approval date: **`r format(latest_approval, "%B %d, %Y")`**
 
 ---
 
