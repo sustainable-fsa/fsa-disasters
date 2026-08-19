@@ -286,9 +286,174 @@ if(update_disasters){
                          version = "latest",
                          compression = "zstd",
                          use_dictionary = TRUE)
-  
-  
-  
+
+  # Browser-optimized JSON mirror of the same records: column-oriented rather
+  # than one object per record, every string dictionary-coded to an integer
+  # index, and every date an integer count of days from one epoch. It is also
+  # normalized, because a dashboard facets on declarations rather than on
+  # counties while the flat table repeats each declaration's year, number,
+  # description, and three dates once per county the declaration names. So the
+  # declarations are lifted into a table of their own — currently 3,907 entries
+  # for 184,815 county rows — that the county rows index into. Together that
+  # takes the flat 9.0 MB to roughly 4.0 MB raw and 400 KB gzipped over the
+  # wire. The schema is a frozen contract — add fields; never rename or reorder
+  # existing ones without bumping "fsa-disasters/1".
+
+  # Days from an epoch instead of ISO strings: a few bytes per date, and a
+  # number the browser can compare and bucket without parsing. FSA's spreadsheet
+  # zeros land in 1899 and so encode negative, which is fine and deliberate. The
+  # epoch travels with the payload so a reader never has to assume it.
+  web_epoch <- as.Date("1970-01-01")
+
+  # Dictionaries. Radix sort is the C locale, so the file is byte-identical
+  # whatever locale the runner happens to be in. Disaster years are emitted
+  # verbatim, junk values ("0", "2011, 2012") included: the payload mirrors the
+  # archive, and cleaning it is an upstream decision.
+  web_years <- sort(unique(disasters$`Disaster Year`), method = "radix")
+  web_decl_types <- sort(unique(disasters$`Designation/Declaration Type`),
+                         method = "radix")
+  web_numbers <- sort(unique(disasters$`Designation/Declaration Number`),
+                      method = "radix")
+  web_descriptions <- sort(unique(disasters$`Description of Disaster`),
+                           method = "radix")
+  web_disaster_types <- sort(unique(disasters$`Disaster Type`),
+                             method = "radix")
+  web_fips_codes <- sort(unique(disasters$FIPS), method = "radix")
+  web_county_names <- sort(unique(disasters$`County/Tribal Government`),
+                           method = "radix")
+  web_states <- sort(unique(disasters$State), method = "radix")
+
+  # The one dictionary that is not sorted: Designation Code is an ordered
+  # factor, and the payload freezes its semantic order (0 = Primary,
+  # 1 = Contiguous).
+  web_codes <- levels(disasters$`Designation Code`)
+  stopifnot(identical(web_codes, c("Primary", "Contiguous")))
+
+  # Amendment numbers are "0" through "16" with no leading zeros, so an integer
+  # carries them without loss. A future "01" would not round-trip, so abort here
+  # rather than silently renumber it.
+  web_amendments <-
+    disasters$`Amendment Number`[!is.na(disasters$`Amendment Number`)]
+  stopifnot(identical(as.character(as.integer(web_amendments)), web_amendments))
+
+  # An integer-coded copy of the flat table, carrying the original columns along
+  # so the round-trip proof below can compare against this same row order.
+  web <-
+    disasters %>%
+    dplyr::mutate(
+      year = match(`Disaster Year`, web_years) - 1L,
+      decl_type = match(`Designation/Declaration Type`, web_decl_types) - 1L,
+      number = match(`Designation/Declaration Number`, web_numbers) - 1L,
+      amendment = as.integer(`Amendment Number`),
+      description = match(`Description of Disaster`, web_descriptions) - 1L,
+      approval = as.integer(`Approval date` - web_epoch),
+      begin = as.integer(`Begin Date` - web_epoch),
+      end = as.integer(`End Date` - web_epoch),
+      disaster_type = match(`Disaster Type`, web_disaster_types) - 1L,
+      fips = match(FIPS, web_fips_codes) - 1L,
+      county_name = match(`County/Tribal Government`, web_county_names) - 1L,
+      state = match(State, web_states) - 1L,
+      code = as.integer(`Designation Code`) - 1L
+    )
+
+  # The declarations table is a distinct() over all eight declaration-level
+  # columns, not over number and amendment alone: should FSA ever split dates or
+  # descriptions within a single amendment, that degrades into a couple of extra
+  # declaration rows instead of quietly dropping the variants. Every sort key is
+  # an integer index or a day count, so the order is locale-independent; NA (no
+  # amendment, or no date reported) sorts last.
+  web_decl <-
+    web %>%
+    dplyr::distinct(year, decl_type, number, amendment, description,
+                    approval, begin, end) %>%
+    dplyr::arrange(number, amendment, year, decl_type, description,
+                   approval, begin, end) %>%
+    dplyr::mutate(decl = dplyr::row_number() - 1L)
+
+  # Rows are unique on all thirteen columns, so this is a total order.
+  web <-
+    web %>%
+    dplyr::left_join(web_decl,
+                     by = c("year", "decl_type", "number", "amendment",
+                            "description", "approval", "begin", "end")) %>%
+    dplyr::arrange(decl, disaster_type, code, fips, county_name, state)
+
+  stopifnot(
+    !anyNA(web$decl),
+    nrow(web) == nrow(disasters)
+  )
+
+  # Every one of the thirteen archive columns must come back out of the encoding
+  # exactly. A lossy index or a mis-joined declaration would be invisible in a
+  # browser, so reconstruct all of them and compare.
+  web_decl_of_row <- web$decl + 1L
+  stopifnot(
+    identical(web_years[web_decl$year[web_decl_of_row] + 1L],
+              web$`Disaster Year`),
+    identical(web_decl_types[web_decl$decl_type[web_decl_of_row] + 1L],
+              web$`Designation/Declaration Type`),
+    identical(web_numbers[web_decl$number[web_decl_of_row] + 1L],
+              web$`Designation/Declaration Number`),
+    identical(as.character(web_decl$amendment[web_decl_of_row]),
+              web$`Amendment Number`),
+    identical(web_descriptions[web_decl$description[web_decl_of_row] + 1L],
+              web$`Description of Disaster`),
+    identical(web_epoch + web_decl$approval[web_decl_of_row],
+              web$`Approval date`),
+    identical(web_epoch + web_decl$begin[web_decl_of_row],
+              web$`Begin Date`),
+    identical(web_epoch + web_decl$end[web_decl_of_row],
+              web$`End Date`),
+    identical(web_disaster_types[web$disaster_type + 1L],
+              web$`Disaster Type`),
+    identical(web_fips_codes[web$fips + 1L], web$FIPS),
+    identical(web_county_names[web$county_name + 1L],
+              web$`County/Tribal Government`),
+    identical(web_states[web$state + 1L], web$State),
+    identical(factor(web_codes[web$code + 1L],
+                     levels = web_codes,
+                     ordered = TRUE),
+              web$`Designation Code`)
+  )
+
+  # No timestamp field: a week with unchanged data must produce a byte-identical
+  # file, so that CI's commit-back is a no-op. na = "null" because jsonlite
+  # otherwise writes the string "NA", which a reader would take for a date.
+  jsonlite::write_json(
+    list(
+      schema = jsonlite::unbox("fsa-disasters/1"),
+      license = jsonlite::unbox("CC0-1.0"),
+      epoch = jsonlite::unbox(format(web_epoch)),
+      years = web_years,
+      decl_types = web_decl_types,
+      numbers = web_numbers,
+      descriptions = web_descriptions,
+      disaster_types = web_disaster_types,
+      fips_codes = web_fips_codes,
+      county_names = web_county_names,
+      states = web_states,
+      codes = web_codes,
+      n_decl = jsonlite::unbox(nrow(web_decl)),
+      decl_year = web_decl$year,
+      decl_type = web_decl$decl_type,
+      decl_number = web_decl$number,
+      decl_amendment = web_decl$amendment,
+      decl_description = web_decl$description,
+      decl_approval = web_decl$approval,
+      decl_begin = web_decl$begin,
+      decl_end = web_decl$end,
+      n = jsonlite::unbox(nrow(web)),
+      decl = web$decl,
+      disaster_type = web$disaster_type,
+      fips = web$fips,
+      county_name = web$county_name,
+      state = web$state,
+      code = web$code
+    ),
+    "fsa-disasters.json",
+    auto_unbox = FALSE, digits = NA, na = "null"
+  )
+
 }
 
 ## Create directory listing infrastructure
@@ -343,6 +508,12 @@ s3_put(bucket = s3_bucket,
        cache_control = "max-age=3600")
 
 s3_put(bucket = s3_bucket,
+       key = paste0(s3_prefix, "/fsa-disasters.json"),
+       file = "fsa-disasters.json",
+       content_type = "application/json",
+       cache_control = "max-age=3600")
+
+s3_put(bucket = s3_bucket,
        key = paste0(s3_prefix, "/manifest.json"),
        file = "manifest.json",
        content_type = "application/json",
@@ -359,6 +530,7 @@ cf_invalidate(
   paths = c(
     paste0("/", s3_prefix, "/fsa-disasters.csv"),
     paste0("/", s3_prefix, "/fsa-disasters.parquet"),
+    paste0("/", s3_prefix, "/fsa-disasters.json"),
     paste0("/", s3_prefix, "/manifest.json"),
     paste0("/", s3_prefix, "/_manifest.txt")
   )
