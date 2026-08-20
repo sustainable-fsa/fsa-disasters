@@ -25,7 +25,8 @@ so the information is consistent across years. Dates are converted to
 proper formats, and designation codes are normalized. The data is
 cleaned to remove errors and reorganized so each disaster type and
 affected county is clearly represented. Finally, the consolidated
-dataset is saved in both CSV and Parquet formats for easy analysis.
+dataset is saved in both CSV and Parquet formats for easy analysis, and
+in a browser-optimized JSON mirror committed to this repository.
 
 ------------------------------------------------------------------------
 
@@ -70,10 +71,50 @@ provides access to Presidential Major Disaster declarations.
   disaster data in a single parquet file.
 - [`fsa-disasters.csv`](fsa-disasters.csv): Consolidated disaster data
   in a single comma-separated values file.
+- [`fsa-disasters.json`](https://data.sustainable-fsa.com/fsa-disasters/fsa-disasters.json):
+  The same records restructured for browsers — dictionary-coded,
+  declaration-normalized JSON (see below). Unlike the CSV and Parquet,
+  committed to git as well as mirrored to S3.
 - [data-raw/](data-raw/): Directory containing raw disaster data files
   as posted by the FSA.
 - [`README.Rmd`](README.Rmd): This README file, providing an overview
   and usage instructions.
+
+------------------------------------------------------------------------
+
+## 📦 `fsa-disasters.json`
+
+The same records as the CSV and Parquet — derived from the identical
+table in the same run — restructured for direct use in a browser. It is
+not an archive-of-record format; for analysis, use the CSV or Parquet.
+It differs in structure, not content:
+
+- **Column-oriented**: one array per field with one entry per record,
+  rather than one object per record.
+- **Declaration-normalized**: the flat table repeats each declaration’s
+  year, number, description, and three dates once per county that
+  declaration names. Here the 3,907 distinct declaration amendments are
+  a table of their own, and the 184,815 county rows carry an index into
+  it. With the column orientation, that takes the file to about 4 MB raw
+  and roughly 390 KB gzipped over the wire.
+- **Dictionary-coded strings**: disaster years, declaration types and
+  numbers, disaster descriptions and types, FIPS codes, and county and
+  state names each appear once in a lookup array; the record arrays hold
+  integer indices into them.
+- **Compact dates**: each date is an integer count of days since
+  1970-01-01 rather than an ISO string, and is `null` wherever FSA
+  reports no date — most often an end date, absent on about 104,000
+  rows.
+- **Values verbatim, irregularities included**: the payload mirrors the
+  archive rather than cleaning it. `Disaster Year` is `"0"` on 84 rows
+  and `"2011, 2012"` on 10, and 270 approval dates are 1899-12-30 — a
+  spreadsheet zero, which encodes here as the negative day count
+  `-25569`.
+
+The payload is self-describing via its `schema` field
+(`fsa-disasters/1`), a frozen contract with its consumers: fields may be
+added, but existing ones are never renamed or reordered without bumping
+the schema.
 
 ------------------------------------------------------------------------
 
