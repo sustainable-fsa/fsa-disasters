@@ -209,6 +209,10 @@ if(update_disasters){
                   `Begin Date` == "2025-10-15" & 
                     `Designation/Declaration Number` == "S5897" ~  
                     lubridate::as_date("2024-10-15"),
+                  # Typed as text "03-172026", so it parses to NA above
+                  is.na(`Begin Date`) &
+                    `Designation/Declaration Number` == "S6268" ~
+                    lubridate::as_date("2026-03-17"),
                   .default = `Begin Date`) %>%
         lubridate::as_date()
     ) %>%
