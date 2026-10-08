@@ -206,7 +206,7 @@ ggplot(counties) +
 
 <img src="./example-1.png" alt="" style="display: block; margin: auto;" />
 
-Latest designation approval date: **June 08, 2026**
+Latest designation approval date: **August 03, 2026**
 
 ------------------------------------------------------------------------
 
