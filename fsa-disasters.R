@@ -32,6 +32,42 @@ s3_prefix <- Sys.getenv("S3_PREFIX", unset = "fsa-disasters")
 
 update_disasters <- TRUE
 
+# Akamai in front of fsa.usda.gov stalls or resets requests from non-browser
+# User-Agents (including polite identifying ones), so every request uses a
+# mainstream browser string.
+ua <- paste0("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ",
+             "AppleWebKit/537.36 (KHTML, like Gecko) ",
+             "Chrome/126.0.0.0 Safari/537.36")
+
+# Akamai also serves sporadic 503s (and the odd connection reset or DNS
+# failure) on single page requests, so retry transient failures with backoff
+# before giving up.
+fetch <- function(url, attempts = 5) {
+  for (attempt in seq_len(attempts)) {
+    res <- tryCatch(
+      curl::curl_fetch_memory(url, handle = curl::new_handle(useragent = ua)),
+      error = function(e) e
+    )
+    if (!inherits(res, "error") && res$status_code == 200L)
+      return(res)
+    status <- if (inherits(res, "error")) conditionMessage(res) else
+      paste("HTTP", res$status_code)
+    transient <- inherits(res, "error") ||
+      res$status_code %in% c(408L, 429L, 500L, 502L, 503L, 504L)
+    if (!transient || attempt == attempts)
+      stop("Fetch failed (", status, "): ", url)
+    message("Fetch failed (", status, ") on attempt ", attempt, "; retrying: ",
+            url)
+    Sys.sleep(10 * attempt)
+  }
+}
+
+fetch_html <- function(url) {
+  fetch(url)$content %>%
+    rawToChar() %>%
+    xml2::read_html()
+}
+
 if(update_disasters){
   raw_path <- "data-raw"
   
@@ -40,7 +76,7 @@ if(update_disasters){
              showWarnings = FALSE)
   
   raw_files <-
-    xml2::read_html("https://www.fsa.usda.gov/resources/disaster-assistance-program/disaster-designation-information") %>%
+    fetch_html("https://www.fsa.usda.gov/resources/disaster-assistance-program/disaster-designation-information") %>%
     xml2::xml_find_all(".//a") %>%
     { .[grepl("xls|metadata-cy", xml2::xml_attr(., "href"))] } %>%
     {
@@ -58,7 +94,7 @@ if(update_disasters){
     dplyr::mutate(
       request = ifelse(stringr::str_detect(request, "xls"),
                        request,
-                       xml2::read_html(request) %>%
+                       fetch_html(request) %>%
                          xml2::xml_find_all(".//a") %>%
                          xml2::xml_attr("href") %>%
                          stringr::str_subset("xls")
@@ -83,17 +119,36 @@ if(update_disasters){
   #     destfiles = outfile,
   #     resume = TRUE
   #   )
-  download_results <- 
-    raw_files %$%
-    purrr::map2_dfr(request, outfile, 
-                    .f = 
-                      ~curl::multi_download(url = .x,
-                                            destfile = .y,
-                                            progress = FALSE,
-                                            resume = TRUE
-                      ))
+  # Retry stragglers; resume = TRUE continues honest partial transfers. A
+  # response with a bad HTTP status leaves an error page on disk (and reports
+  # no curl error), which resume would corrupt -- delete those before
+  # retrying.
+  pending <- raw_files
+  for (attempt in 1:5) {
+    download_results <- 
+      pending %$%
+      purrr::map2_dfr(request, outfile, 
+                      .f = 
+                        ~curl::multi_download(url = .x,
+                                              destfile = .y,
+                                              useragent = ua,
+                                              progress = FALSE,
+                                              resume = TRUE
+                        ))
+    ok <- is.na(download_results$error) &
+      download_results$status_code %in% c(200L, 206L, 416L)
+    bad_status <- !(download_results$status_code %in% c(200L, 206L, 416L)) &
+      !is.na(download_results$status_code)
+    unlink(pending$outfile[bad_status])
+    pending <- pending[!ok, ]
+    if (nrow(pending) == 0) break
+    message(nrow(pending), " downloads failed on attempt ", attempt,
+            "; retrying")
+    Sys.sleep(20 * attempt)
+  }
   
-  if(any(!is.na(download_results$error))){
+  if(nrow(pending) > 0){
+    print(dplyr::select(pending, request, outfile))
     stop("FILE DOWNLOAD ERRORS")
   }
   
